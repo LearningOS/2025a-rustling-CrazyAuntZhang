@@ -2,53 +2,98 @@
 	graph
 	This problem requires you to implement a basic graph functio
 */
-// I AM NOT DONE
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct NodeNotInGraph;
+
 impl fmt::Display for NodeNotInGraph {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "accessing a node that is not in the graph")
     }
 }
+
 pub struct UndirectedGraph {
     adjacency_table: HashMap<String, Vec<(String, i32)>>,
 }
+
 impl Graph for UndirectedGraph {
     fn new() -> UndirectedGraph {
         UndirectedGraph {
             adjacency_table: HashMap::new(),
         }
     }
+
     fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
         &mut self.adjacency_table
     }
+
     fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
         &self.adjacency_table
     }
+
+    fn add_node(&mut self, node: &str) -> bool {
+        let node_str = node.to_string();
+        if self.adjacency_table.contains_key(&node_str) {
+            false // 已存在，添加失败
+        } else {
+            self.adjacency_table.insert(node_str, Vec::new());
+            true // 添加成功
+        }
+    }
+
     fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        //TODO
+        let (node1, node2, weight) = edge;
+        let node1_str = node1.to_string();
+        let node2_str = node2.to_string();
+
+        // 确保两个节点都存在
+        self.add_node(node1);
+        self.add_node(node2);
+
+        // 添加 node1 -> node2
+        self.adjacency_table
+            .get_mut(&node1_str)
+            .unwrap()
+            .push((node2_str.clone(), weight));
+
+        // 添加 node2 -> node1（无向图）
+        self.adjacency_table
+            .get_mut(&node2_str)
+            .unwrap()
+            .push((node1_str, weight));
     }
 }
+
 pub trait Graph {
     fn new() -> Self;
     fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
     fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
+
     fn add_node(&mut self, node: &str) -> bool {
-        //TODO
-		true
+        let node_str = node.to_string();
+        if self.adjacency_table().contains_key(&node_str) {
+            false
+        } else {
+            self.adjacency_table_mutable().insert(node_str, Vec::new());
+            true
+        }
     }
+
     fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        //TODO
+        // 默认实现留空，由具体类型实现
     }
+
     fn contains(&self, node: &str) -> bool {
         self.adjacency_table().get(node).is_some()
     }
+
     fn nodes(&self) -> HashSet<&String> {
         self.adjacency_table().keys().collect()
     }
+
     fn edges(&self) -> Vec<(&String, &String, i32)> {
         let mut edges = Vec::new();
         for (from_node, from_node_neighbours) in self.adjacency_table() {

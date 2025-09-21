@@ -2,7 +2,7 @@
 	single linked list merge
 	This problem requires you to merge two ordered singly linked lists into one ordered singly linked list
 */
-// I AM NOT DONE
+
 
 use std::fmt::{self, Display, Formatter};
 use std::ptr::NonNull;
@@ -69,15 +69,74 @@ impl<T> LinkedList<T> {
             },
         }
     }
-	pub fn merge(list_a:LinkedList<T>,list_b:LinkedList<T>) -> Self
-	{
-		//TODO
-		Self {
-            length: 0,
-            start: None,
-            end: None,
+    // ✅ 核心：合并两个有序链表
+    pub fn merge(mut list_a: LinkedList<T>, mut list_b: LinkedList<T>) -> Self
+    where
+        T: PartialOrd,
+    {
+        let mut merged = LinkedList::new();
+        let mut a_cursor = list_a.start;
+        let mut b_cursor = list_b.start;
+
+        // 合并主循环：每次取较小值节点
+        while a_cursor.is_some() && b_cursor.is_some() {
+            let a_ptr = a_cursor.unwrap();
+            let b_ptr = b_cursor.unwrap();
+
+            let a_val = unsafe { &(*a_ptr.as_ptr()).val };
+            let b_val = unsafe { &(*b_ptr.as_ptr()).val };
+
+            let chosen_ptr = if a_val <= b_val { a_ptr } else { b_ptr };
+
+            // 推进对应游标
+            if chosen_ptr == a_ptr {
+                a_cursor = unsafe { (*a_ptr.as_ptr()).next };
+            } else {
+                b_cursor = unsafe { (*b_ptr.as_ptr()).next };
+            }
+
+            // 剪断选中节点的 next
+            unsafe {
+                (*chosen_ptr.as_ptr()).next = None;
+            }
+
+            // 将节点移入 merged
+            let node_box = unsafe { Box::from_raw(chosen_ptr.as_ptr()) };
+            merged.add_node_box(node_box);
         }
-	}
+
+        // 拼接剩余部分
+        merged.append_list(a_cursor);
+        merged.append_list(b_cursor);
+
+        // 更新长度
+        merged.length = list_a.length + list_b.length;
+        merged
+    }
+
+    // 🧩 辅助：直接添加一个已存在的节点 Box
+    fn add_node_box(&mut self, mut node: Box<Node<T>>) {
+        node.next = None;
+        let node_ptr = Some(unsafe { NonNull::new_unchecked(Box::into_raw(node)) });
+        match self.end {
+            None => self.start = node_ptr,
+            Some(end_ptr) => unsafe { (*end_ptr.as_ptr()).next = node_ptr },
+        }
+        self.end = node_ptr;
+        self.length += 1;
+    }
+
+    // 🧩 辅助：将一个链表片段（从 cursor 开始）全部追加到当前链表
+    fn append_list(&mut self, mut cursor: Option<NonNull<Node<T>>>) {
+        while let Some(ptr) = cursor {
+            cursor = unsafe { (*ptr.as_ptr()).next };
+            unsafe {
+                (*ptr.as_ptr()).next = None; // 断开原连接
+            }
+            let node_box = unsafe { Box::from_raw(ptr.as_ptr()) };
+            self.add_node_box(node_box);
+        }
+    }
 }
 
 impl<T> Display for LinkedList<T>
